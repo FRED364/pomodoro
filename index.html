@@ -316,6 +316,7 @@ let totalSecs = 25 * 60;
 let remaining = totalSecs;
 let running = false;
 let interval = null;
+let endTime = null; // marca de tiempo (ms) en que debe terminar la fase actual
 let log = JSON.parse(localStorage.getItem('pomodoro_log') || '[]');
 
 function mins(id) { return parseInt(document.getElementById(id).value) || 1; }
@@ -353,6 +354,15 @@ function render() {
   document.getElementById('ring').style.strokeDashoffset = CIRC * frac;
 }
 
+function tick() {
+  // Calcula el tiempo restante a partir del reloj real, no de un contador.
+  // Así sigue siendo preciso aunque el navegador ralentice el temporizador
+  // en pestañas en segundo plano.
+  remaining = Math.max(0, Math.round((endTime - Date.now()) / 1000));
+  render();
+  if (remaining <= 0) finish();
+}
+
 function toggle() {
   if (running) {
     clearInterval(interval);
@@ -361,11 +371,9 @@ function toggle() {
   } else {
     running = true;
     document.getElementById('startBtn').textContent = 'Pausar';
-    interval = setInterval(() => {
-      remaining--;
-      render();
-      if (remaining <= 0) finish();
-    }, 1000);
+    endTime = Date.now() + remaining * 1000;
+    tick();
+    interval = setInterval(tick, 250);
   }
 }
 
