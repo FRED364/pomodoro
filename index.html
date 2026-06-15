@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pomodoro</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --work-color: #e74c3c;
+    --break-color: #27ae60;
+    --long-color: #2980b9;
+    --bg: #1a1a2e;
+    --card: #16213e;
+    --text: #eee;
+    --muted: #888;
+  }
+
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+  }
+
+  h1 { font-size: 1.4rem; font-weight: 600; letter-spacing: 3px; margin-bottom: 24px; color: var(--muted); text-transform: uppercase; }
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 32px;
+  }
+
+  .tab {
+    padding: 6px 18px;
+    border-radius: 20px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: transparent;
+    color: var(--muted);
+    transition: all .2s;
+    letter-spacing: 1px;
+  }
+
+  .tab.active {
+    color: white;
+  }
+
+  .tab.work.active { background: var(--work-color); }
+  .tab.break.active { background: var(--break-color); }
+  .tab.long.active { background: var(--long-color); }
+
+  .ring-wrap {
+    position: relative;
+    width: 240px;
+    height: 240px;
+    margin-bottom: 32px;
+  }
+
+  svg.ring {
+    position: absolute;
+    top: 0; left: 0;
+    transform: rotate(-90deg);
+  }
+
+  circle.track {
+    fill: none;
+    stroke: #2a2a4a;
+    stroke-width: 10;
+  }
+
+  circle.progress {
+    fill: none;
+    stroke: var(--work-color);
+    stroke-width: 10;
+    stroke-linecap: round;
+    transition: stroke-dashoffset .9s linear, stroke .3s;
+  }
+
+  .timer-display {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+
+  .time {
+    font-size: 3.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 2px;
+  }
+
+  .phase-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    margin-top: 4px;
+    text-transform: uppercase;
+  }
+
+  .controls {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 40px;
+    align-items: center;
+  }
+
+  .btn {
+    padding: 12px 36px;
+    border-radius: 30px;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: transform .1s, filter .1s;
+  }
+
+  .btn:active { transform: scale(0.95); }
+
+  .btn-main {
+    background: var(--work-color);
+    color: white;
+    min-width: 140px;
+  }
+
+  .btn-skip {
+    background: transparent;
+    color: var(--muted);
+    font-size: 1.4rem;
+    padding: 8px 12px;
+  }
+
+  .btn-skip:hover { color: white; }
+
+  .log-section {
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .log-title {
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .log-clear {
+    font-size: 0.7rem;
+    color: var(--muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .log-clear:hover { color: white; }
+
+  .log-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .log-item {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    animation: fadeIn .3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .log-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 10px;
+    flex-shrink: 0;
+  }
+
+  .log-left { display: flex; align-items: center; }
+  .log-time-stamp { color: var(--muted); font-size: 0.75rem; }
+
+  .pomodoro-count {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+  }
+
+  .tomatoes { font-size: 1rem; letter-spacing: 2px; }
+
+  .settings-row {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .setting {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .setting label {
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .setting input[type=number] {
+    width: 60px;
+    background: var(--card);
+    border: 1px solid #333;
+    border-radius: 8px;
+    color: white;
+    font-size: 1rem;
+    text-align: center;
+    padding: 4px;
+  }
+
+  .setting input:focus { outline: none; border-color: var(--work-color); }
+</style>
+</head>
+<body>
+
+<h1>🍅 Pomodoro</h1>
+
+<div class="tabs">
+  <button class="tab work active" onclick="selectMode('work')">Trabajo</button>
+  <button class="tab break" onclick="selectMode('break')">Descanso</button>
+  <button class="tab long" onclick="selectMode('long')">Pausa larga</button>
+</div>
+
+<div class="ring-wrap">
+  <svg class="ring" width="240" height="240">
+    <circle class="track" cx="120" cy="120" r="108"/>
+    <circle class="progress" id="ring" cx="120" cy="120" r="108"
+      stroke-dasharray="678.6" stroke-dashoffset="0"/>
+  </svg>
+  <div class="timer-display">
+    <div class="time" id="display">25:00</div>
+    <div class="phase-label" id="phase-label">Enfócate</div>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="btn-skip btn" onclick="skipPhase()" title="Saltar fase">⏭</button>
+  <button class="btn btn-main" id="startBtn" onclick="toggle()">Iniciar</button>
+  <button class="btn-skip btn" onclick="resetTimer()" title="Reiniciar">↺</button>
+</div>
+
+<div class="settings-row">
+  <div class="setting">
+    <label>Trabajo (min)</label>
+    <input type="number" id="workMin" value="25" min="1" max="99" onchange="applySettings()">
+  </div>
+  <div class="setting">
+    <label>Descanso (min)</label>
+    <input type="number" id="breakMin" value="5" min="1" max="99" onchange="applySettings()">
+  </div>
+  <div class="setting">
+    <label>Pausa larga (min)</label>
+    <input type="number" id="longMin" value="15" min="1" max="99" onchange="applySettings()">
+  </div>
+</div>
+
+<div class="log-section">
+  <div class="log-header">
+    <span class="log-title">Sesiones de hoy <span class="tomatoes" id="tomatoes"></span></span>
+    <button class="log-clear" onclick="clearLog()">Borrar</button>
+  </div>
+  <ul class="log-list" id="logList"></ul>
+</div>
+
+<script>
+const CIRC = 2 * Math.PI * 108;
+
+const modes = {
+  work:  { label: 'Enfócate',     color: '#e74c3c', tab: 'work' },
+  break: { label: 'Descansa',     color: '#27ae60', tab: 'break' },
+  long:  { label: 'Pausa larga',  color: '#2980b9', tab: 'long' },
+};
+
+let mode = 'work';
+let totalSecs = 25 * 60;
+let remaining = totalSecs;
+let running = false;
+let interval = null;
+let log = JSON.parse(localStorage.getItem('pomodoro_log') || '[]');
+
+function mins(id) { return parseInt(document.getElementById(id).value) || 1; }
+
+function getDurations() {
+  return { work: mins('workMin') * 60, break: mins('breakMin') * 60, long: mins('longMin') * 60 };
+}
+
+function selectMode(m) {
+  clearInterval(interval);
+  running = false;
+  mode = m;
+  totalSecs = getDurations()[m];
+  remaining = totalSecs;
+  document.getElementById('startBtn').textContent = 'Iniciar';
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('.tab.' + m).classList.add('active');
+  document.getElementById('ring').style.stroke = modes[m].color;
+  document.getElementById('phase-label').textContent = modes[m].label;
+  render();
+}
+
+function applySettings() {
+  totalSecs = getDurations()[mode];
+  remaining = totalSecs;
+  if (running) { clearInterval(interval); running = false; document.getElementById('startBtn').textContent = 'Iniciar'; }
+  render();
+}
+
+function render() {
+  const m = String(Math.floor(remaining / 60)).padStart(2, '0');
+  const s = String(remaining % 60).padStart(2, '0');
+  document.getElementById('display').textContent = m + ':' + s;
+  const frac = remaining / totalSecs;
+  document.getElementById('ring').style.strokeDashoffset = CIRC * frac;
+}
+
+function toggle() {
+  if (running) {
+    clearInterval(interval);
+    running = false;
+    document.getElementById('startBtn').textContent = 'Reanudar';
+  } else {
+    running = true;
+    document.getElementById('startBtn').textContent = 'Pausar';
+    interval = setInterval(() => {
+      remaining--;
+      render();
+      if (remaining <= 0) finish();
+    }, 1000);
+  }
+}
+
+function finish() {
+  clearInterval(interval);
+  running = false;
+  document.getElementById('startBtn').textContent = 'Iniciar';
+  addLog(mode);
+  beep();
+  // auto-advance
+  const next = mode === 'work' ? (countWork() % 4 === 0 ? 'long' : 'break') : 'work';
+  setTimeout(() => selectMode(next), 800);
+}
+
+function skipPhase() {
+  clearInterval(interval);
+  running = false;
+  document.getElementById('startBtn').textContent = 'Iniciar';
+  const next = mode === 'work' ? 'break' : 'work';
+  selectMode(next);
+}
+
+function resetTimer() {
+  clearInterval(interval);
+  running = false;
+  remaining = totalSecs;
+  document.getElementById('startBtn').textContent = 'Iniciar';
+  render();
+}
+
+function countWork() {
+  const today = new Date().toDateString();
+  return log.filter(e => e.type === 'work' && e.date === today).length;
+}
+
+function addLog(type) {
+  const today = new Date().toDateString();
+  const now = new Date();
+  const time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  log.unshift({ type, date: today, time });
+  // keep last 50
+  if (log.length > 50) log = log.slice(0, 50);
+  localStorage.setItem('pomodoro_log', JSON.stringify(log));
+  renderLog();
+}
+
+function renderLog() {
+  const today = new Date().toDateString();
+  const todayLog = log.filter(e => e.date === today);
+  const workCount = todayLog.filter(e => e.type === 'work').length;
+  document.getElementById('tomatoes').textContent = '🍅'.repeat(Math.min(workCount, 8));
+
+  const list = document.getElementById('logList');
+  list.innerHTML = '';
+  todayLog.forEach(e => {
+    const labels = { work: 'Trabajo', break: 'Descanso', long: 'Pausa larga' };
+    const colors = { work: '#e74c3c', break: '#27ae60', long: '#2980b9' };
+    const li = document.createElement('li');
+    li.className = 'log-item';
+    li.innerHTML = `
+      <span class="log-left">
+        <span class="log-dot" style="background:${colors[e.type]}"></span>
+        ${labels[e.type]}
+      </span>
+      <span class="log-time-stamp">${e.time}</span>`;
+    list.appendChild(li);
+  });
+}
+
+function clearLog() {
+  const today = new Date().toDateString();
+  log = log.filter(e => e.date !== today);
+  localStorage.setItem('pomodoro_log', JSON.stringify(log));
+  renderLog();
+}
+
+function beep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.15, 0.3].forEach(t => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = 880;
+      g.gain.setValueAtTime(0.3, ctx.currentTime + t);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.12);
+      o.start(ctx.currentTime + t);
+      o.stop(ctx.currentTime + t + 0.12);
+    });
+  } catch(e) {}
+}
+
+// init
+render();
+renderLog();
+</script>
+</body>
+</html>
