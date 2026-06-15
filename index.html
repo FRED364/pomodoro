@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pomodoro</title>
+<title>🍅 Pomodoro</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -384,7 +384,7 @@ function skipPhase() {
   clearInterval(interval);
   running = false;
   document.getElementById('startBtn').textContent = 'Iniciar';
-  const next = mode === 'work' ? 'break' : 'work';
+  const next = mode === 'work' ? (countWork() % 4 === 0 ? 'long' : 'break') : 'work';
   selectMode(next);
 }
 
